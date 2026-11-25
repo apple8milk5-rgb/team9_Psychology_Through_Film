@@ -347,6 +347,7 @@ def get_cgv_movie_reviews(url: str, max_results: int = 50) -> list:
 # 3. 텍스트 전처리, AI 모델 감정 분석 및 단어 추출 함수
 # ----------------------------------------------------
 STOPWORDS = {
+    # 명사 및 부사 불용어
     "영화",
     "호프",
     "작품",
@@ -362,23 +363,24 @@ STOPWORDS = {
     "조금",
     "약간",
     "그냥",
-    "하다",
-    "되다",
-    "있다",
-    "없다",
-    "보다",
-    "같다",
-    "않다",
-    "그렇다",
-    "이렇다",
-    "저렇다",
-    "오다",
-    "가다",
-    "주다",
-    "받다",
-    "만들다",
-    "나오다",
-    "들다",
+    # 동사·형용사 어간 불용어 (Kiwi 토큰화 결과 기준 '-다' 제외)
+    "하",
+    "되",
+    "있",
+    "없",
+    "보",
+    "같",
+    "않",
+    "그렇",
+    "이렇",
+    "저렇",
+    "오",
+    "가",
+    "주",
+    "받",
+    "만들",
+    "나오",
+    "들",
 }
 
 
@@ -427,13 +429,18 @@ def extract_keywords_from_comment(text: str, kiwi: Kiwi) -> list:
     valid_tags = {"NNG", "NNP", "VA", "VV", "XR"}
     keywords = []
     for token in tokens:
-        if (
-            token.tag in valid_tags
-            and len(token.form) > 1
-            and token.form not in STOPWORDS
-        ):
-            if token.form not in keywords:
-                keywords.append(token.form)
+        if token.tag not in valid_tags or token.form in STOPWORDS:
+            continue
+
+        # 동사(VV)·형용사(VA)는 1글자 감정 어간('좋', '싫' 등)을 살리고, 명사·어근은 2글자 이상만 추출
+        is_valid_length = (
+            len(token.form) >= 1
+            if token.tag in {"VA", "VV"}
+            else len(token.form) > 1
+        )
+
+        if is_valid_length and token.form not in keywords:
+            keywords.append(token.form)
     return keywords
 
 
